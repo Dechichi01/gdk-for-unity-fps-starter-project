@@ -33,14 +33,19 @@ namespace Improbable.Gdk.Movement
             MotorExtensions = GetComponents<IMotorExtension>();
         }
 
-        public bool HasEnoughMovement(float threshold, out Vector3 movement, out float timeDelta, out bool anyMovement,
-            out int messageStamp)
+        public bool HasEnoughMovement(float threshold)
         {
-            movement = cumulativeMovement;
-            timeDelta = cumulativeTimeDelta;
-            anyMovement = this.anyMovement;
-            messageStamp = this.messageStamp;
             return cumulativeTimeDelta > threshold;
+        }
+
+        public MovementSyncData GetMovementSyncData()
+        {
+            //TODO: Possibly ditch variables and just keep a MovementSyncData member variable
+            return new MovementSyncData(
+                cumulativeMovement,
+                cumulativeTimeDelta,
+                anyMovement,
+                messageStamp);
         }
 
         public void Reset()
@@ -141,6 +146,22 @@ namespace Improbable.Gdk.Movement
                     Move(distanceLeftToMove);
                     hasMovementLeft = false;
                 }
+            }
+        }
+
+        public struct MovementSyncData
+        {
+            public readonly Vector3 Movement;
+            public readonly float TimeDelta;
+            public readonly bool AnyMovement;
+            public readonly int MessageStamp;
+
+            public MovementSyncData(Vector3 movement, float timeDelta, bool anyMovement, int messageStamp)
+            {
+                Movement = movement;
+                TimeDelta = timeDelta;
+                AnyMovement = anyMovement;
+                MessageStamp = messageStamp;
             }
         }
     }

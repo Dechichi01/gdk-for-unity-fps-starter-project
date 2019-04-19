@@ -314,25 +314,23 @@ namespace Improbable.Gdk.Movement
         {
             //Send network data if required (If moved, or was still moving last update)
             var anyUpdate = false;
-            if (HasEnoughMovement(transformUpdateDelta,
-                out var movement,
-                out var timeDelta,
-                out var anyMovement,
-                out var messageStamp))
+
+            if (HasEnoughMovement(transformUpdateDelta))
             {
+                var syncData = GetMovementSyncData();
                 Reset();
-                if (anyMovement || !lastMovementStationary)
+                if (syncData.AnyMovement || !lastMovementStationary)
                 {
                     var clientRequest = new ClientRequest
                     {
                         IncludesJump = didJump,
-                        Movement = movement.ToIntDelta(),
-                        TimeDelta = timeDelta,
-                        Timestamp = messageStamp
+                        Movement = syncData.Movement.ToIntDelta(),
+                        TimeDelta = syncData.TimeDelta,
+                        Timestamp = syncData.MessageStamp
                     };
                     var update = new ClientMovement.Update { Latest = new Option<ClientRequest>(clientRequest) };
                     client.SendUpdate(update);
-                    lastMovementStationary = !anyMovement;
+                    lastMovementStationary = !syncData.AnyMovement;
                     didJump = false;
                     anyUpdate = true;
                 }
