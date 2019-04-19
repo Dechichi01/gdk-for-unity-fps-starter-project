@@ -46,7 +46,6 @@ namespace Improbable.Gdk.Movement
 
         private float verticalVelocity;
         private Vector3 lastDirection;
-        private bool jumpedThisFrame;
         private bool didJump;
         private bool lastMovementStationary;
 
@@ -142,6 +141,7 @@ namespace Improbable.Gdk.Movement
             server.OnForcedRotationEvent += OnForcedRotation;
         }
 
+        #region Server Listeners
         private void OnForcedRotation(RotationUpdate forcedRotation)
         {
             var rotationUpdate = new RotationUpdate
@@ -168,7 +168,9 @@ namespace Improbable.Gdk.Movement
         {
             Reconcile(update.Position.ToVector3() + origin, update.Timestamp);
         }
+        #endregion
 
+        #region Client Movement
         public void ApplyMovement(Vector3 movement, Quaternion rotation, MovementSpeed movementSpeed, bool startJump)
         {
             ProcessInput(movement, rotation, movementSpeed, startJump);
@@ -178,71 +180,23 @@ namespace Improbable.Gdk.Movement
 
         public void ProcessInput(Vector3 movement, Quaternion rotation, MovementSpeed movementSpeed, bool startJump)
         {
-            var isJumping = verticalVelocity > 0;
+            UpdateVerticalVelocity();
 
-            verticalVelocity = Mathf.Clamp(verticalVelocity - movementSettings.Gravity * Time.deltaTime,
-                -movementSettings.TerminalVelocity, verticalVelocity);
+            UpdateSprintCooldown(movementSpeed, movement);
 
-            if (IsGrounded && verticalVelocity < -movementSettings.GroundedFallSpeed)
-            {
-                verticalVelocity = -movementSettings.GroundedFallSpeed;
-            }
+            var toMove = GetGroundedMovement(movement, movementSpeed);
+            ApplyAirMovement(ref toMove);
+            ApplyJumpMovement(ref toMove, startJump);
 
-            var inAir = isJumping || !IsGrounded;
-            var isSprinting = movementSpeed == MovementSpeed.Sprint && movement.sqrMagnitude > 0 && IsGrounded;
-            if (isSprinting)
-            {
-                sprintCooldownExpires = Time.time + movementSettings.SprintCooldown;
-            }
+            ApplyFrameMovement(toMove);
 
-            // Grounded motion
-            // Strafe in the direction given.
-            var speed = GetSpeed(movementSpeed);
-            var toMove = movement * speed;
+            CheckExtensionsForOverrides();
 
-            // Aerial motion
-            if (inAir)
-            {
-                // Keep your last direction, with some damping.
-                var momentumMovement = Vector3.Lerp(lastDirection, Vector3.zero,
-                    Time.deltaTime * movementSettings.InAirDamping);
+            Rotate(rotation);
+        }
 
-                // Update the last direction (reduced by the air damping)
-                lastDirection = momentumMovement;
-
-                // Can only accelerate up to the movement speed.
-                var maxAirSpeed = Mathf.Max(momentumMovement.magnitude, movementSettings.MovementSpeed.RunSpeed);
-
-                var aerialMovement = Vector3.ClampMagnitude(
-                    momentumMovement + toMove,
-                    maxAirSpeed
-                );
-                // Lerp between just momentum, and the momentum with full movement
-                toMove = Vector3.Lerp(momentumMovement, aerialMovement, movementSettings.AirControlModifier);
-            }
-
-
-            // Jumping
-            if (jumpedThisFrame)
-            {
-                jumpedThisFrame = false;
-            }
-
-            if (startJump && IsGrounded && !isJumping)
-            {
-                verticalVelocity = movementSettings.StartingJumpSpeed;
-                didJump = true;
-                jumpedThisFrame = true;
-            }
-
-            // Record the (horizontal) direction when last on the ground (for jumping or falling off platforms)
-            if (IsGrounded)
-            {
-                lastDirection = toMove;
-            }
-
-            toMove += Vector3.up * verticalVelocity;
-
+        private void ApplyFrameMovement(Vector3 toMove)
+        {
             // Inform the motor.
             var oldPosition = transform.position;
             MoveFrame(toMove * Time.deltaTime);
@@ -253,17 +207,77 @@ namespace Improbable.Gdk.Movement
             {
                 verticalVelocity = 0;
             }
+        }
 
-            CheckExtensionsForOverrides();
+        private bool IsJumping()
+        {
+            return verticalVelocity > 0;
+        }
 
-            //Rotation
-            var x = rotationConstraints.XAxisRotation ? rotation.eulerAngles.x : 0;
-            var y = rotationConstraints.YAxisRotation ? rotation.eulerAngles.y : 0;
-            var z = rotationConstraints.ZAxisRotation ? rotation.eulerAngles.z : 0;
-            transform.rotation = Quaternion.Euler(x, y, z);
-            CurrentPitch = rotation.eulerAngles.x;
-            CurrentYaw = rotation.eulerAngles.y;
-            CurrentRoll = rotation.eulerAngles.z;
+        private void UpdateVerticalVelocity()
+        {
+            verticalVelocity = Mathf.Clamp(verticalVelocity - movementSettings.Gravity * Time.deltaTime,
+                -movementSettings.TerminalVelocity, verticalVelocity);
+
+            if (IsGrounded && verticalVelocity < -movementSettings.GroundedFallSpeed)
+            {
+                verticalVelocity = -movementSettings.GroundedFallSpeed;
+            }
+        }
+
+        private void UpdateSprintCooldown(MovementSpeed movementSpeed, Vector3 movementInput)
+        {
+            var isSprinting = movementSpeed == MovementSpeed.Sprint && movementInput.sqrMagnitude > 0 && IsGrounded;
+            if (isSprinting)
+            {
+                sprintCooldownExpires = Time.time + movementSettings.SprintCooldown;
+            }
+        }
+
+        private Vector3 GetGroundedMovement(Vector3 movementInput, MovementSpeed movementSpeed)
+        {
+            // Grounded motion
+            // Strafe in the direction given.
+            var speed = GetSpeed(movementSpeed);
+            return movementInput * speed;
+        }
+
+        private void ApplyAirMovement(ref Vector3 toMove)
+        {
+            var inAir = IsJumping() || !IsGrounded;
+            if (!inAir)
+            {
+                if (IsGrounded) { lastDirection = toMove; }
+                return;
+            }
+
+            // Keep your last direction, with some damping.
+            var momentumMovement = Vector3.Lerp(lastDirection, Vector3.zero,
+                Time.deltaTime * movementSettings.InAirDamping);
+
+            // Update the last direction (reduced by the air damping)
+            lastDirection = momentumMovement;
+
+            // Can only accelerate up to the movement speed.
+            var maxAirSpeed = Mathf.Max(momentumMovement.magnitude, movementSettings.MovementSpeed.RunSpeed);
+
+            var aerialMovement = Vector3.ClampMagnitude(
+                momentumMovement + toMove,
+                maxAirSpeed
+            );
+            // Lerp between just momentum, and the momentum with full movement
+            toMove = Vector3.Lerp(momentumMovement, aerialMovement, movementSettings.AirControlModifier);
+        }
+
+        private void ApplyJumpMovement(ref Vector3 toMove, bool startJump)
+        {
+            if (startJump && IsGrounded && !IsJumping())
+            {
+                verticalVelocity = movementSettings.StartingJumpSpeed;
+                didJump = true;
+            }
+
+            toMove += Vector3.up * verticalVelocity;
         }
 
         public float GetSpeed(MovementSpeed requestedSpeed)
@@ -281,6 +295,20 @@ namespace Improbable.Gdk.Movement
             }
         }
 
+        private void Rotate(Quaternion rotation)
+        {
+            //Rotation
+            var x = rotationConstraints.XAxisRotation ? rotation.eulerAngles.x : 0;
+            var y = rotationConstraints.YAxisRotation ? rotation.eulerAngles.y : 0;
+            var z = rotationConstraints.ZAxisRotation ? rotation.eulerAngles.z : 0;
+            transform.rotation = Quaternion.Euler(x, y, z);
+            CurrentPitch = rotation.eulerAngles.x;
+            CurrentYaw = rotation.eulerAngles.y;
+            CurrentRoll = rotation.eulerAngles.z;
+        }
+        #endregion
+
+        #region Send server updates
         // Returns true if an update is sent.
         private bool SendPositionUpdate()
         {
@@ -345,5 +373,6 @@ namespace Improbable.Gdk.Movement
 
             return anyUpdate;
         }
+        #endregion
     }
 }
