@@ -13,25 +13,72 @@ namespace Improbable.Gdk.Movement
         private float cumulativeTimeDelta;
         private bool anyMovement;
 
-        //Interpolation
+        //Interpolation: Movement
         private bool hasMovementLeft;
         private float timeLeftToMove;
         private Vector3 distanceLeftToMove;
         private int messageStamp;
+
+        //Interpolation: Rotation
+        private float timeLeftToRotate;
+        private float lastFullTime;
+        private Quaternion source;
+        private Quaternion target;
+        private bool hasRotationLeft;
 
         [Tooltip(
             "When interpolating motion, if the (squared) distance travelled is greater than this, teleport instead of interpolating.")]
         [SerializeField]
         private float teleportDistanceSqrd = 25f;
 
+        [SerializeField]
+        private RotationConstraints rotationConstraints = new RotationConstraints
+        {
+            XAxisRotation = true,
+            YAxisRotation = true,
+            ZAxisRotation = true
+        };
+
         private CharacterController characterController;
         protected IMotorExtension[] MotorExtensions;
+        private Vector3 currentRotation;
 
         protected virtual void Awake()
         {
             characterController = GetComponent<CharacterController>();
             MotorExtensions = GetComponents<IMotorExtension>();
         }
+
+        #region Rotation
+        public void Rotate(Vector3 rot)
+        {
+            FilterRotation(ref rot);
+            SetRotation(rot);
+        }
+
+        public void Rotate(float x, float y, float z)
+        {
+            Rotate(new Vector3(x, y, z));
+        }
+
+        protected void FilterRotation(ref Vector3 rot)
+        {
+            rot.x = rotationConstraints.XAxisRotation ? rot.x : 0;
+            rot.y = rotationConstraints.YAxisRotation ? rot.y : 0;
+            rot.z = rotationConstraints.ZAxisRotation ? rot.z : 0;
+        }
+
+        protected virtual void SetRotation(Vector3 rot)
+        {
+            transform.rotation = Quaternion.Euler(rot);
+            currentRotation = rot;
+        }
+
+        protected Vector3 GetCurrentRotation()
+        {
+            return currentRotation;
+        }
+        #endregion
 
         public bool HasEnoughMovement(float threshold)
         {
@@ -114,7 +161,7 @@ namespace Improbable.Gdk.Movement
             Move(toMove);
         }
 
-        public void Interpolate(Vector3 target, float timeDelta)
+        public void InterpolateTo(Vector3 target, float timeDelta)
         {
             distanceLeftToMove = target - transform.position;
             var sqrMagnitude = distanceLeftToMove.sqrMagnitude;
@@ -129,7 +176,21 @@ namespace Improbable.Gdk.Movement
             }
         }
 
+        public void InterpolateTo(Quaternion targetQuaternion, float timeDelta)
+        {
+            hasRotationLeft = true;
+            lastFullTime = timeLeftToRotate = timeDelta;
+            target = targetQuaternion;
+            source = transform.rotation;
+        }
+
         protected virtual void Update()
+        {
+            InterpolatePosition();
+            InterpolateRotation();
+        }
+
+        protected virtual void InterpolatePosition()
         {
             if (hasMovementLeft)
             {
@@ -146,6 +207,26 @@ namespace Improbable.Gdk.Movement
                     Move(distanceLeftToMove);
                     hasMovementLeft = false;
                 }
+            }
+        }
+
+        protected virtual void InterpolateRotation()
+        {
+            if (!hasRotationLeft)
+            {
+                return;
+            }
+
+            if (Time.deltaTime < timeLeftToRotate)
+            {
+                transform.rotation =
+                    Quaternion.Lerp(source, target, 1 - timeLeftToRotate / lastFullTime);
+                timeLeftToRotate -= Time.deltaTime;
+            }
+            else
+            {
+                transform.rotation = target;
+                hasRotationLeft = false;
             }
         }
 

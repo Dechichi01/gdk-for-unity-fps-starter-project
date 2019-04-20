@@ -33,13 +33,6 @@ namespace Improbable.Gdk.Movement
             InAirDamping = 1.0f
         };
 
-        [SerializeField] private RotationConstraints rotationConstraints = new RotationConstraints
-        {
-            XAxisRotation = true,
-            YAxisRotation = true,
-            ZAxisRotation = true
-        };
-
         private const float FloatErrorTolerance = 0.01f;
 
         private Vector3 origin;
@@ -50,52 +43,11 @@ namespace Improbable.Gdk.Movement
         private bool lastMovementStationary;
 
         private float cumulativeRotationTimeDelta;
-        private float currentPitch;
-        private float currentYaw;
-        private float currentRoll;
         private bool yawDirty;
         private bool rollDirty;
         private bool pitchDirty;
+
         private float sprintCooldownExpires;
-
-        public float CurrentYaw
-        {
-            set
-            {
-                if (value != currentYaw)
-                {
-                    currentYaw = value;
-                    yawDirty = true;
-                }
-            }
-            get => currentYaw;
-        }
-
-        public float CurrentPitch
-        {
-            set
-            {
-                if (value != currentPitch)
-                {
-                    currentPitch = value;
-                    pitchDirty = true;
-                }
-            }
-            get => currentPitch;
-        }
-
-        public float CurrentRoll
-        {
-            set
-            {
-                if (value != currentRoll)
-                {
-                    currentRoll = value;
-                    rollDirty = true;
-                }
-            }
-            get => currentRoll;
-        }
 
         public bool HasSprintedRecently => Time.time < sprintCooldownExpires;
 
@@ -157,11 +109,11 @@ namespace Improbable.Gdk.Movement
             cumulativeRotationTimeDelta = 0;
             pitchDirty = rollDirty = yawDirty = false;
 
-            //Apply the forced rotation
-            var x = rotationConstraints.XAxisRotation ? forcedRotation.Pitch.ToFloat1k() : 0;
-            var y = rotationConstraints.YAxisRotation ? forcedRotation.Yaw.ToFloat1k() : 0;
-            var z = rotationConstraints.ZAxisRotation ? forcedRotation.Roll.ToFloat1k() : 0;
-            transform.rotation = Quaternion.Euler(x, y, z);
+            //Possibly solve previous bug of not updating current yaw/pitch/roll on forced rotation
+            Rotate(
+                forcedRotation.Pitch.ToFloat1k(),
+                forcedRotation.Yaw.ToFloat1k(),
+                forcedRotation.Roll.ToFloat1k());
         }
 
         private void OnServerUpdate(ServerResponse update)
@@ -192,7 +144,7 @@ namespace Improbable.Gdk.Movement
 
             CheckExtensionsForOverrides();
 
-            Rotate(rotation);
+            Rotate(rotation.eulerAngles);
         }
 
         private void ApplyFrameMovement(Vector3 toMove)
@@ -295,16 +247,22 @@ namespace Improbable.Gdk.Movement
             }
         }
 
-        private void Rotate(Quaternion rotation)
+        protected override void SetRotation(Vector3 rot)
         {
-            //Rotation
-            var x = rotationConstraints.XAxisRotation ? rotation.eulerAngles.x : 0;
-            var y = rotationConstraints.YAxisRotation ? rotation.eulerAngles.y : 0;
-            var z = rotationConstraints.ZAxisRotation ? rotation.eulerAngles.z : 0;
-            transform.rotation = Quaternion.Euler(x, y, z);
-            CurrentPitch = rotation.eulerAngles.x;
-            CurrentYaw = rotation.eulerAngles.y;
-            CurrentRoll = rotation.eulerAngles.z;
+            var currentRot = GetCurrentRotation();
+            if (rot.x != currentRot.x)
+            {
+                pitchDirty = true;
+            }
+            if (rot.y != currentRot.y)
+            {
+                yawDirty = true;
+            }
+            if (rot.z != currentRot.z)
+            {
+                rollDirty = true;
+            }
+            base.SetRotation(rot);
         }
         #endregion
 
@@ -349,11 +307,12 @@ namespace Improbable.Gdk.Movement
             {
                 if (pitchDirty || rollDirty || yawDirty)
                 {
+                    var currentRot = GetCurrentRotation();
                     var rotationUpdate = new RotationUpdate
                     {
-                        Pitch = currentPitch.ToInt1k(),
-                        Roll = currentRoll.ToInt1k(),
-                        Yaw = currentYaw.ToInt1k(),
+                        Pitch = currentRot.x.ToInt1k(),
+                        Roll = currentRot.z.ToInt1k(),
+                        Yaw = currentRot.y.ToInt1k(),
                         TimeDelta = cumulativeRotationTimeDelta
                     };
                     var update = new ClientRotation.Update { Latest = new Option<RotationUpdate>(rotationUpdate) };
