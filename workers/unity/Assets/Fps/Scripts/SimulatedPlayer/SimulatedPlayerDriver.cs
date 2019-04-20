@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using Improbable.Common;
 using Improbable.Gdk.Core;
 using Improbable.Gdk.Subscriptions;
@@ -122,20 +122,17 @@ public class SimulatedPlayerDriver : MonoBehaviour
 
     private void Update()
     {
-        if (movementDriver.enabled)
+        switch (state)
         {
-            switch (state)
-            {
-                case PlayerState.Dead:
-                    // Do Nothing.
-                    break;
-                case PlayerState.LookingForTarget:
-                    Update_LookingForTarget();
-                    break;
-                case PlayerState.ShootingTarget:
-                    Update_ShootingTarget();
-                    break;
-            }
+            case PlayerState.Dead:
+                // Do Nothing.
+                break;
+            case PlayerState.LookingForTarget:
+                Update_LookingForTarget();
+                break;
+            case PlayerState.ShootingTarget:
+                Update_ShootingTarget();
+                break;
         }
     }
 

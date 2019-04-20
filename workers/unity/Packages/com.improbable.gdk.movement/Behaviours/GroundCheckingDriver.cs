@@ -1,8 +1,9 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 namespace Improbable.Gdk.Movement
 {
-    public class GroundCheckingDriver : CharacterControllerMotor
+    [RequireComponent(typeof(CharacterControllerMotor))]
+    public class GroundCheckingDriver : MonoBehaviour
     {
         // Ground checking
         public bool IsGrounded { get; private set; }
@@ -14,21 +15,30 @@ namespace Improbable.Gdk.Movement
         [SerializeField] private LayerMask groundLayerMask = ~0;
         private readonly Collider[] groundedOverlapSphereArray = new Collider[1];
 
+        protected CharacterControllerMotor motor;
+
+        protected virtual void Awake()
+        {
+            motor = GetComponent<CharacterControllerMotor>();
+        }
+
         private void CheckGrounded()
         {
             IsGrounded = Physics.OverlapSphereNonAlloc(transform.position, groundedRadius, groundedOverlapSphereArray,
                 groundLayerMask) > 0;
+
+            CheckExtensionsForOverrides();
         }
 
-        public override void Move(Vector3 toMove)
+        //TODO: Possibly remove parameters and find cleaner way to CheckGrounded on every movement
+        public virtual void ApplyMovement(Vector3 movement, Quaternion rotation, MovementSpeed movementSpeed, bool startJump)
         {
-            base.Move(toMove);
             CheckGrounded();
         }
 
-        protected void CheckExtensionsForOverrides()
+        private void CheckExtensionsForOverrides()
         {
-            foreach (var extension in MotorExtensions)
+            foreach (var extension in motor.MotorExtensions)
             {
                 if (extension.IsOverrideAir())
                 {

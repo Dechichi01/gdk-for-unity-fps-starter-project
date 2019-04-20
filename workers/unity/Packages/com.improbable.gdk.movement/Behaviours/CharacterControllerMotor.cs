@@ -40,13 +40,19 @@ namespace Improbable.Gdk.Movement
         };
 
         private CharacterController characterController;
-        protected IMotorExtension[] MotorExtensions;
+        public IMotorExtension[] MotorExtensions;
         private Vector3 currentRotation;
 
         protected virtual void Awake()
         {
             characterController = GetComponent<CharacterController>();
             MotorExtensions = GetComponents<IMotorExtension>();
+        }
+
+        protected virtual void Update()
+        {
+            InterpolatePosition();
+            InterpolateRotation();
         }
 
         #region Rotation
@@ -61,7 +67,7 @@ namespace Improbable.Gdk.Movement
             Rotate(new Vector3(x, y, z));
         }
 
-        protected void FilterRotation(ref Vector3 rot)
+        public void FilterRotation(ref Vector3 rot)
         {
             rot.x = rotationConstraints.XAxisRotation ? rot.x : 0;
             rot.y = rotationConstraints.YAxisRotation ? rot.y : 0;
@@ -80,6 +86,44 @@ namespace Improbable.Gdk.Movement
         }
         #endregion
 
+        #region Movement
+        //TODO: Cleaner way to avoid adding didJump to base class method
+        public virtual void MoveFrame(Vector3 toMove, bool didJump)
+        {
+            cumulativeTimeDelta += Time.deltaTime;
+            var before = transform.position;
+            MoveWithExtensions(toMove);
+            var delta = transform.position - before;
+            anyMovement |= delta.sqrMagnitude / Time.deltaTime > 0;
+            cumulativeMovement += delta;
+        }
+
+        protected void Move(Vector3 toMove)
+        {
+            if (characterController.enabled)
+            {
+                characterController.Move(toMove);
+            }
+        }
+
+        // Separate from regular move, as we only want the extensions applied to the movement once.
+        private void MoveWithExtensions(Vector3 toMove)
+        {
+            if (!characterController.enabled)
+            {
+                return;
+            }
+
+            foreach (var extension in MotorExtensions)
+            {
+                extension.BeforeMove(toMove);
+            }
+
+            Move(toMove);
+        }
+        #endregion
+
+        #region ClientSync
         public bool HasEnoughMovement(float threshold)
         {
             return cumulativeTimeDelta > threshold;
@@ -104,21 +148,6 @@ namespace Improbable.Gdk.Movement
             messageStamp++;
         }
 
-        public void MoveFrame(Vector3 toMove)
-        {
-            cumulativeTimeDelta += Time.deltaTime;
-            var before = transform.position;
-            MoveWithExtensions(toMove);
-            var delta = transform.position - before;
-            anyMovement |= delta.sqrMagnitude / Time.deltaTime > 0;
-            cumulativeMovement += delta;
-        }
-
-        public void NoMovement()
-        {
-            cumulativeTimeDelta += Time.deltaTime;
-        }
-
         public void Reconcile(Vector3 position, int timestamp)
         {
             transform.position = position;
@@ -136,31 +165,9 @@ namespace Improbable.Gdk.Movement
 
             Move(cumulativeMovement);
         }
+        #endregion
 
-        public virtual void Move(Vector3 toMove)
-        {
-            if (characterController.enabled)
-            {
-                characterController.Move(toMove);
-            }
-        }
-
-        // Separate from regular move, as we only want the extensions applied to the movement once.
-        public void MoveWithExtensions(Vector3 toMove)
-        {
-            if (!characterController.enabled)
-            {
-                return;
-            }
-
-            foreach (var extension in MotorExtensions)
-            {
-                extension.BeforeMove(toMove);
-            }
-
-            Move(toMove);
-        }
-
+        #region Interpolation
         public void InterpolateTo(Vector3 target, float timeDelta)
         {
             distanceLeftToMove = target - transform.position;
@@ -182,12 +189,6 @@ namespace Improbable.Gdk.Movement
             lastFullTime = timeLeftToRotate = timeDelta;
             target = targetQuaternion;
             source = transform.rotation;
-        }
-
-        protected virtual void Update()
-        {
-            InterpolatePosition();
-            InterpolateRotation();
         }
 
         protected virtual void InterpolatePosition()
@@ -229,6 +230,7 @@ namespace Improbable.Gdk.Movement
                 hasRotationLeft = false;
             }
         }
+        #endregion
 
         public struct MovementSyncData
         {

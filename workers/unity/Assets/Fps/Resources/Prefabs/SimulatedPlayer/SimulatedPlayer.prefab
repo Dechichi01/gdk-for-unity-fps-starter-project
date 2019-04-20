@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 114099301705431196}
   - component: {fileID: 143213819140892078}
   - component: {fileID: 114774703231759244}
+  - component: {fileID: 1290336443821259983}
   - component: {fileID: 114077868185640900}
   - component: {fileID: 114349539066892404}
   - component: {fileID: 114779873026297234}
@@ -115,15 +116,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3914475562c91fe4db45424efe19c38b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  teleportDistanceSqrd: 25
   groundedRadius: 0.2
   groundLayerMask:
     serializedVersion: 2
     m_Bits: 1
-  transformUpdateHz: 15
-  rotationUpdateHz: 15
-  transformUpdateDelta: 0.06666667
-  rotationUpdateDelta: 0.06666667
   movementSettings:
     MovementSpeed:
       WalkSpeed: 2.5
@@ -136,10 +132,27 @@ MonoBehaviour:
     GroundedFallSpeed: 3.5
     AirControlModifier: 0.25
     InAirDamping: 0.5
+--- !u!114 &1290336443821259983
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1266140103605188}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a4468f254b686de488b7356395c7f941, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  teleportDistanceSqrd: 25
   rotationConstraints:
-    XAxisRotation: 1
+    XAxisRotation: 0
     YAxisRotation: 1
     ZAxisRotation: 0
+  transformUpdateHz: 15
+  rotationUpdateHz: 15
+  transformUpdateDelta: 0.06666667
+  rotationUpdateDelta: 0.06666667
 --- !u!114 &114077868185640900
 MonoBehaviour:
   m_ObjectHideFlags: 0

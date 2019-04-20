@@ -19,6 +19,7 @@ GameObject:
   - component: {fileID: 114251151529455824}
   - component: {fileID: 114316454962868320}
   - component: {fileID: 114295608448625932}
+  - component: {fileID: 919836848467811569}
   - component: {fileID: 205572536524406604}
   m_Layer: 10
   m_Name: Player
@@ -190,11 +191,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ecdad25e8df427c4397e2a22db72b3c6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  teleportDistanceSqrd: 25
   groundedRadius: 0.2
   groundLayerMask:
     serializedVersion: 2
     m_Bits: 1
+--- !u!114 &919836848467811569
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1807652507279196}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 48611fb87b008db459d35caa963f13da, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  teleportDistanceSqrd: 25
   rotationConstraints:
     XAxisRotation: 0
     YAxisRotation: 1

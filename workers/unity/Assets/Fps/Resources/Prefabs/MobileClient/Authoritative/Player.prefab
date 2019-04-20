@@ -124,6 +124,7 @@ GameObject:
   - component: {fileID: 114198340130317920}
   - component: {fileID: 114795034482753322}
   - component: {fileID: 114890930238186000}
+  - component: {fileID: 3377021376754457567}
   - component: {fileID: 114095212150324808}
   - component: {fileID: 114492761064943198}
   - component: {fileID: 114471432205030634}
@@ -271,15 +272,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3914475562c91fe4db45424efe19c38b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  teleportDistanceSqrd: 25
   groundedRadius: 0.2
   groundLayerMask:
     serializedVersion: 2
     m_Bits: 1
-  transformUpdateHz: 15
-  rotationUpdateHz: 15
-  transformUpdateDelta: 0.06666667
-  rotationUpdateDelta: 0.06666667
   movementSettings:
     MovementSpeed:
       WalkSpeed: 2.5
@@ -292,10 +288,27 @@ MonoBehaviour:
     GroundedFallSpeed: 3.5
     AirControlModifier: 0.25
     InAirDamping: 0.5
+--- !u!114 &3377021376754457567
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1627949407420470}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a4468f254b686de488b7356395c7f941, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  teleportDistanceSqrd: 25
   rotationConstraints:
     XAxisRotation: 0
     YAxisRotation: 1
     ZAxisRotation: 0
+  transformUpdateHz: 15
+  rotationUpdateHz: 15
+  transformUpdateDelta: 0.06666667
+  rotationUpdateDelta: 0.06666667
 --- !u!114 &114095212150324808
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -601,6 +614,11 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 4620716434285874}
     m_Modifications:
+    - target: {fileID: 1620896566736479575, guid: 99c1c836e4262284d9b458f03442a4f6,
+        type: 3}
+      propertyPath: m_Name
+      value: FirstPersonModel
+      objectReference: {fileID: 0}
     - target: {fileID: 1371366245061083600, guid: 99c1c836e4262284d9b458f03442a4f6,
         type: 3}
       propertyPath: m_LocalPosition.x
@@ -655,11 +673,6 @@ PrefabInstance:
         type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1620896566736479575, guid: 99c1c836e4262284d9b458f03442a4f6,
-        type: 3}
-      propertyPath: m_Name
-      value: FirstPersonModel
       objectReference: {fileID: 0}
     - target: {fileID: 6108130638274169511, guid: 99c1c836e4262284d9b458f03442a4f6,
         type: 3}

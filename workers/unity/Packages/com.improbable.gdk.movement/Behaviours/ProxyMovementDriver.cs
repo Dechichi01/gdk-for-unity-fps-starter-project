@@ -32,8 +32,9 @@ namespace Improbable.Gdk.Movement
                 rotation.Yaw.ToFloat1k(),
                 rotation.Roll.ToFloat1k());
 
-            FilterRotation(ref rot);
-            InterpolateTo(Quaternion.Euler(rot), rotation.TimeDelta);
+            
+            motor.FilterRotation(ref rot);
+            motor.InterpolateTo(Quaternion.Euler(rot), rotation.TimeDelta);
         }
 
         private void OnServerUpdate(ServerResponse movement)
@@ -43,7 +44,7 @@ namespace Improbable.Gdk.Movement
                 return;
             }
 
-            InterpolateTo(movement.Position.ToVector3() + origin, movement.TimeDelta);
+            motor.InterpolateTo(movement.Position.ToVector3() + origin, movement.TimeDelta);
         }
     }
 }
